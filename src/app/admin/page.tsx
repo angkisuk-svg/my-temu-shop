@@ -4,22 +4,44 @@ import { useState, useEffect } from 'react';
 import { doc, setDoc, collection, getDocs, deleteDoc } from "firebase/firestore"; 
 import { db } from '../firebase'; 
 
+// 💡 데이터 구조를 명확히 정의 (타입스크립트 안정성 추가)
+interface Product {
+  id: string;
+  name: string;
+  category: string;
+  price: string;
+  originalPrice: string;
+  imageUrl: string;
+  affiliateLink: string;
+}
+
 export default function AdminPage() {
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [fetchTrigger, setFetchTrigger] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
+  
+  // 💡 현재 웹사이트 주소를 자동으로 감지하는 상태값
+  const [currentDomain, setCurrentDomain] = useState('https://my-temu-shop.vercel.app');
+
+  const [formData, setFormData] = useState<Product>({
     id: '', name: '', category: '', price: '', originalPrice: '', imageUrl: '', affiliateLink: ''
   });
+
+  useEffect(() => {
+    // 클라이언트 환경에서 현재 도메인 주소 자동 세팅
+    if (typeof window !== 'undefined') {
+      setCurrentDomain(window.location.origin);
+    }
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) return;
     const fetchProducts = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "products"));
-        const data = querySnapshot.docs.map(doc => ({ ...doc.data() }));
+        const data = querySnapshot.docs.map(doc => ({ ...doc.data() } as Product));
         setProducts(data);
       } catch (error) {
         console.error("데이터 로딩 실패:", error);
@@ -67,7 +89,7 @@ export default function AdminPage() {
     }
   };
 
-  const handleEdit = (product: any) => {
+  const handleEdit = (product: Product) => {
     setFormData(product);
     setIsEditing(true); 
     window.scrollTo({ top: 0, behavior: 'smooth' }); 
@@ -80,21 +102,28 @@ export default function AdminPage() {
   };
 
   const handleCopyLink = (id: string) => {
-    // 🚨 브랜드 도메인(sns10) 적용 완료!
-    const fullUrl = `https://sns10.vercel.app/?id=${id}`;
+    // 🚨 자동 감지된 도메인으로 안전하게 링크 복사
+    const fullUrl = `${currentDomain}/?id=${id}`;
     navigator.clipboard.writeText(fullUrl).then(() => {
-      alert(`🔗 복사 완료: ${fullUrl}`);
+      alert(`🔗 복사 완료: ${fullUrl}\n틱톡/숏폼에 바로 붙여넣으세요!`);
     });
   };
 
-   const lastUsedId = products.length > 0 
-    ? products.map(p => p.id).sort((a, b) => b.localeCompare(a))[0] 
-    : '없음';
+  // 최근 등록 ID 및 다음 추천 ID 계산 로직
+  const sortedById = [...products].sort((a, b) => b.id.localeCompare(a.id, undefined, { numeric: true }));
+  const lastUsedId = sortedById.length > 0 ? sortedById[0].id : '없음';
+  
+  // 숫자로만 된 ID일 경우 다음 번호 자동 계산 (+1)
+  let nextSuggestedId = '0001';
+  if (lastUsedId !== '없음') {
+    const numOnly = lastUsedId.replace(/[^0-9]/g, '');
+    if (numOnly) {
+      nextSuggestedId = String(parseInt(numOnly, 10) + 1).padStart(numOnly.length, '0');
+    }
+  }
 
-   // 🚨 추가된 로직: 화면에 보여줄 상품 목록을 최신순(내림차순)으로 정렬하기
-  const sortedProducts = [...products].sort((a, b) => 
-    String(b.id).localeCompare(String(a.id), undefined, { numeric: true })
-  );
+  // 화면 출력용 최신순 정렬 (ID 기준 내림차순)
+  const sortedProducts = sortedById;
 
   // 1. 로그인 화면 (접속 전)
   if (!isAuthenticated) {
@@ -124,24 +153,24 @@ export default function AdminPage() {
         </div>
       </div>
 
-       {/* 🚨 추가된 UI: 최근 등록된 상품 번호 안내 패널 */}
+       {/* --- 번호 안내 패널 --- */}
       <div className="mb-4 p-4 bg-slate-800 border border-slate-600 rounded-lg flex items-center gap-3 shadow-md">
         <span className="text-2xl">💡</span>
-        <p className="text-sm text-slate-300">
-          가장 최근에 등록된 고유 ID는 <span className="text-orange-400 font-bold text-lg">{lastUsedId}</span> 입니다. 
-          <span className="text-slate-400 ml-1">이어서 다음 번호를 입력해 주세요.</span>
-        </p>
+        <div className="text-sm text-slate-300">
+          <p>마지막으로 등록된 고유 ID: <span className="text-white font-bold">{lastUsedId}</span></p>
+          <p className="mt-1 text-orange-400 font-bold">새 상품 등록 시 추천 ID 👉 {nextSuggestedId}</p>
+        </div>
       </div>
 
       {/* --- 상품 입력 폼 --- */}
       <form onSubmit={handleSubmit} className="flex flex-col gap-5 mb-12 bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl">
         <div>
           <label className="text-xs font-bold text-slate-400 mb-1 block">
-            고유 ID <span className="font-normal text-slate-500">(미리보기: https://sns10.vercel.app/?id=<span className="text-orange-400 font-bold">{formData.id || '...'}</span>)</span>
+            고유 ID <span className="font-normal text-slate-500">(미리보기: {currentDomain}/?id=<span className="text-orange-400 font-bold">{formData.id || '...'}</span>)</span>
           </label>
           <input required type="text" name="id" value={formData.id} onChange={handleChange} readOnly={isEditing}
             className={`w-full p-3 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none ${isEditing ? 'opacity-50 cursor-not-allowed' : 'focus:border-orange-500'}`}
-            placeholder="예: 0001"/>
+            placeholder={`예: ${nextSuggestedId}`}/>
           {isEditing && (
             <p className="text-xs text-orange-400 mt-1 font-bold">※ 수정 중에는 고유 ID를 변경할 수 없습니다.</p>
           )}
@@ -207,6 +236,7 @@ export default function AdminPage() {
         {sortedProducts.map((product) => (
           <div key={product.id} className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex justify-between items-center hover:border-slate-500 transition-colors">
             <div className="flex items-center gap-4 overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={product.imageUrl} alt={product.name} className="w-14 h-14 rounded-lg object-cover bg-slate-900 shrink-0" />
               <div className="flex flex-col">
                 <span className="text-xs text-orange-400 font-bold mb-1">{product.id}</span>

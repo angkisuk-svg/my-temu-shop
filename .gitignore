@@ -1,0 +1,4 @@
+# 깃허브 탑승 금지 명단
+node_modules
+.next
+.env.local

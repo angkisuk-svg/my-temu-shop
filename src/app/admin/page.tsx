@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { doc, setDoc, collection, getDocs, deleteDoc } from "firebase/firestore"; 
-import { db } from '../firebase'; 
+import { db, auth } from '../firebase'; // 🔐 auth 추가
+import { signInWithEmailAndPassword } from "firebase/auth"; // 🔐 파이어베이스 공식 로그인 함수
 
 interface Product {
   id: string;
@@ -15,6 +16,7 @@ interface Product {
 }
 
 export default function AdminPage() {
+  const [email, setEmail] = useState(''); // 🔐 이메일 입력칸 추가
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -25,7 +27,6 @@ export default function AdminPage() {
     id: '', name: '', category: '', price: '', originalPrice: '', imageUrl: '', affiliateLink: ''
   });
 
-  // 🚨 여기에 회원님의 진짜 도메인을 단단히 고정했습니다!
   const SITE_URL = "https://ddoksooki.vercel.app";
 
   useEffect(() => {
@@ -42,12 +43,15 @@ export default function AdminPage() {
     fetchProducts();
   }, [isAuthenticated, fetchTrigger]); 
 
-  const handleLogin = (e: React.FormEvent) => {
+  // 🚨 완벽하게 변경된 로그인 로직
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === (process.env.NEXT_PUBLIC_ADMIN_PASS || 'ss2658817@')) { 
+    try {
+      // 파이어베이스 서버에 이메일/비밀번호를 보내 진짜 관리자인지 확인
+      await signInWithEmailAndPassword(auth, email, password);
       setIsAuthenticated(true);
-    } else {
-      alert('비밀번호가 틀렸습니다!');
+    } catch (error) {
+      alert('이메일이나 비밀번호가 틀렸습니다!');
     }
   };
 
@@ -120,8 +124,14 @@ export default function AdminPage() {
         <form onSubmit={handleLogin} className="bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700 w-full max-w-sm">
           <div className="flex justify-center mb-4"><span className="text-4xl">🔐</span></div>
           <h2 className="text-xl font-bold mb-6 text-center text-white">관리자 시스템</h2>
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+            placeholder="이메일 입력" required
+            className="w-full bg-slate-900 border border-slate-600 p-3 mb-3 rounded-lg text-white focus:outline-none focus:border-orange-500" />
+            
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-            placeholder="비밀번호 입력" className="w-full bg-slate-900 border border-slate-600 p-3 mb-6 rounded-lg text-white focus:outline-none focus:border-orange-500" />
+            placeholder="비밀번호 입력" required
+            className="w-full bg-slate-900 border border-slate-600 p-3 mb-6 rounded-lg text-white focus:outline-none focus:border-orange-500" />
+            
           <button type="submit" className="w-full bg-orange-500 text-white p-3 rounded-lg font-bold hover:bg-orange-600 transition-colors">접속하기</button>
         </form>
       </div>

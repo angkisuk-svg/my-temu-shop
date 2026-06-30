@@ -26,7 +26,7 @@ export default function AdminPage() {
   });
 
   // 🚨 여기에 회원님의 진짜 도메인을 단단히 고정했습니다!
-  const SITE_URL = "https://my-temu-shop.vercel.app";
+  const SITE_URL = "https://sns1-shop.vercel.app";
 
   useEffect(() => {
     if (!isAuthenticated) return;

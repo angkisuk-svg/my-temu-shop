@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { doc, setDoc, collection, getDocs, deleteDoc } from "firebase/firestore"; 
 import { db } from '../firebase'; 
 
-// 💡 데이터 구조를 명확히 정의 (타입스크립트 안정성 추가)
 interface Product {
   id: string;
   name: string;
@@ -21,20 +20,13 @@ export default function AdminPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [fetchTrigger, setFetchTrigger] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  
-  // 💡 현재 웹사이트 주소를 자동으로 감지하는 상태값
-  const [currentDomain, setCurrentDomain] = useState('https://my-temu-shop.vercel.app');
 
   const [formData, setFormData] = useState<Product>({
     id: '', name: '', category: '', price: '', originalPrice: '', imageUrl: '', affiliateLink: ''
   });
 
-  useEffect(() => {
-    // 클라이언트 환경에서 현재 도메인 주소 자동 세팅
-    if (typeof window !== 'undefined') {
-      setCurrentDomain(window.location.origin);
-    }
-  }, []);
+  // 🚨 여기에 회원님의 진짜 도메인을 단단히 고정했습니다!
+  const SITE_URL = "https://my-temu-shop.vercel.app";
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -102,18 +94,16 @@ export default function AdminPage() {
   };
 
   const handleCopyLink = (id: string) => {
-    // 🚨 자동 감지된 도메인으로 안전하게 링크 복사
-    const fullUrl = `${currentDomain}/?id=${id}`;
+    // 🚨 고정된 도메인(SITE_URL)을 사용하여 링크 생성
+    const fullUrl = `${SITE_URL}/?id=${id}`;
     navigator.clipboard.writeText(fullUrl).then(() => {
       alert(`🔗 복사 완료: ${fullUrl}\n틱톡/숏폼에 바로 붙여넣으세요!`);
     });
   };
 
-  // 최근 등록 ID 및 다음 추천 ID 계산 로직
   const sortedById = [...products].sort((a, b) => b.id.localeCompare(a.id, undefined, { numeric: true }));
   const lastUsedId = sortedById.length > 0 ? sortedById[0].id : '없음';
   
-  // 숫자로만 된 ID일 경우 다음 번호 자동 계산 (+1)
   let nextSuggestedId = '0001';
   if (lastUsedId !== '없음') {
     const numOnly = lastUsedId.replace(/[^0-9]/g, '');
@@ -122,10 +112,8 @@ export default function AdminPage() {
     }
   }
 
-  // 화면 출력용 최신순 정렬 (ID 기준 내림차순)
   const sortedProducts = sortedById;
 
-  // 1. 로그인 화면 (접속 전)
   if (!isAuthenticated) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900 text-slate-100 px-4">
@@ -140,11 +128,9 @@ export default function AdminPage() {
     );
   }
 
-  // 2. 관리자 메인 화면 (접속 후 통합 UI)
   return (
     <div className="max-w-2xl mx-auto min-h-screen bg-slate-900 p-6 font-sans text-slate-100">
       
-      {/* --- 타이틀 --- */}
       <div className="border-b border-slate-700 pb-4 mb-6 flex justify-between items-end">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -153,7 +139,6 @@ export default function AdminPage() {
         </div>
       </div>
 
-       {/* --- 번호 안내 패널 --- */}
       <div className="mb-4 p-4 bg-slate-800 border border-slate-600 rounded-lg flex items-center gap-3 shadow-md">
         <span className="text-2xl">💡</span>
         <div className="text-sm text-slate-300">
@@ -162,11 +147,11 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* --- 상품 입력 폼 --- */}
       <form onSubmit={handleSubmit} className="flex flex-col gap-5 mb-12 bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl">
         <div>
           <label className="text-xs font-bold text-slate-400 mb-1 block">
-            고유 ID <span className="font-normal text-slate-500">(미리보기: {currentDomain}/?id=<span className="text-orange-400 font-bold">{formData.id || '...'}</span>)</span>
+            {/* 🚨 미리보기 화면에도 새 도메인이 고정되어 나옵니다! */}
+            고유 ID <span className="font-normal text-slate-500">(미리보기: {SITE_URL}/?id=<span className="text-orange-400 font-bold">{formData.id || '...'}</span>)</span>
           </label>
           <input required type="text" name="id" value={formData.id} onChange={handleChange} readOnly={isEditing}
             className={`w-full p-3 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none ${isEditing ? 'opacity-50 cursor-not-allowed' : 'focus:border-orange-500'}`}
@@ -224,7 +209,6 @@ export default function AdminPage() {
         </button>
       </form>
 
-      {/* --- 등록된 상품 리스트 --- */}
       <div className="border-b border-slate-700 pb-4 mb-6 mt-10">
         <h2 className="text-2xl font-bold text-white flex items-center gap-2">
           <span>📦</span> 등록된 상품 관리
@@ -236,7 +220,6 @@ export default function AdminPage() {
         {sortedProducts.map((product) => (
           <div key={product.id} className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex justify-between items-center hover:border-slate-500 transition-colors">
             <div className="flex items-center gap-4 overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={product.imageUrl} alt={product.name} className="w-14 h-14 rounded-lg object-cover bg-slate-900 shrink-0" />
               <div className="flex flex-col">
                 <span className="text-xs text-orange-400 font-bold mb-1">{product.id}</span>
@@ -264,7 +247,6 @@ export default function AdminPage() {
         )}
       </div>
 
-      {/* --- 통계 대시보드 (구글 애널리틱스 iframe) --- */}
       <div className="border-b border-slate-700 pb-4 mb-6 mt-10">
         <h2 className="text-2xl font-bold text-white flex items-center gap-2">
           <span>📈</span> 실시간 페이지 조회수

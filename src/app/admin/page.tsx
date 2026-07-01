@@ -13,7 +13,7 @@ interface Product {
   originalPrice: string;
   imageUrl: string;
   affiliateLink: string;
-  createdAt?: number; // 💡 최신순 정렬을 위한 등록 시간 데이터 추가
+  createdAt?: number; 
 }
 
 export default function AdminPage() {
@@ -58,11 +58,12 @@ export default function AdminPage() {
     e.preventDefault();
     try {
       const safeId = formData.id.trim();
-      // 💡 새 상품이면 현재 시간을 찍고, 기존 상품 수정이면 기존 시간을 유지합니다.
+      
+      // 🚨 핵심 수정 포인트: 수정이든 신규든 무조건 '현재 시간'으로 덮어씌움!
       const dataToSave = { 
         ...formData, 
         id: safeId,
-        createdAt: formData.createdAt || Date.now() 
+        createdAt: Date.now() 
       };
       
       await setDoc(doc(db, "products", safeId), dataToSave);
@@ -109,7 +110,6 @@ export default function AdminPage() {
     });
   };
 
-  // 1. 다음 ID 추천을 위해 순수하게 ID 번호만 비교 (내림차순)
   const sortedById = [...products].sort((a, b) => b.id.localeCompare(a.id, undefined, { numeric: true }));
   const lastUsedId = sortedById.length > 0 ? sortedById[0].id : '없음';
   
@@ -121,15 +121,15 @@ export default function AdminPage() {
     }
   }
 
-  // 2. 🚨 화면 리스트용 정렬: 등록 시간(createdAt) 최신순으로 정렬!
+  // 🚨 정렬 로직 강화: 시간을 정확한 숫자로 변환하여 비교 (에러 완벽 차단)
   const sortedProducts = [...products].sort((a, b) => {
-    if (a.createdAt && b.createdAt) {
-      return b.createdAt - a.createdAt; // 둘 다 시간이 있으면 최신순
-    }
-    if (a.createdAt) return -1; // a만 시간이 있으면(최신) 위로 올림
-    if (b.createdAt) return 1;  // b만 시간이 있으면(최신) 위로 올림
+    const timeA = Number(a.createdAt) || 0;
+    const timeB = Number(b.createdAt) || 0;
     
-    // 만약 둘 다 옛날에 등록해서 시간이 없다면, 기존처럼 ID 기준 정렬
+    if (timeA > 0 && timeB > 0) return timeB - timeA;
+    if (timeA > 0) return -1;
+    if (timeB > 0) return 1;
+    
     return b.id.localeCompare(a.id, undefined, { numeric: true });
   });
 
@@ -155,7 +155,6 @@ export default function AdminPage() {
 
   return (
     <div className="max-w-2xl mx-auto min-h-screen bg-slate-900 p-6 font-sans text-slate-100">
-      
       <div className="border-b border-slate-700 pb-4 mb-6 flex justify-between items-end">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -244,7 +243,6 @@ export default function AdminPage() {
         {sortedProducts.map((product) => (
           <div key={product.id} className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex justify-between items-center hover:border-slate-500 transition-colors">
             <div className="flex items-center gap-4 overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={product.imageUrl} alt={product.name} className="w-14 h-14 rounded-lg object-cover bg-slate-900 shrink-0" />
               <div className="flex flex-col">
                 <span className="text-xs text-orange-400 font-bold mb-1">{product.id}</span>

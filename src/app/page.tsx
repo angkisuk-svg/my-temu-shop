@@ -13,7 +13,6 @@ function ProductContent() {
   const [products, setProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 1. 데이터 불러오기 및 🚨 최신순 정렬 적용 🚨
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -23,14 +22,16 @@ function ProductContent() {
           ...doc.data()
         }));
 
-        // 💡 관리자 페이지와 동일한 시간 도장(createdAt) 기준 최신순 정렬 로직
+        // 🚨 어드민과 동일한 완벽한 최신순 정렬 로직
         data.sort((a: any, b: any) => {
-          if (a.createdAt && b.createdAt) {
-            return b.createdAt - a.createdAt; 
-          }
-          if (a.createdAt) return -1; 
-          if (b.createdAt) return 1;  
-          return b.id.localeCompare(a.id, undefined, { numeric: true });
+          const timeA = Number(a.createdAt) || 0;
+          const timeB = Number(b.createdAt) || 0;
+          
+          if (timeA > 0 && timeB > 0) return timeB - timeA;
+          if (timeA > 0) return -1;
+          if (timeB > 0) return 1;
+          
+          return (b.id || '').localeCompare(a.id || '', undefined, { numeric: true });
         });
 
         setProducts(data);
@@ -43,7 +44,6 @@ function ProductContent() {
     fetchProducts();
   }, []);
 
-  // 링크에 id가 있으면 그 상품을 띄우고, 없으면 정렬된 데이터의 첫 번째(가장 최신) 상품을 띄움
   const heroProduct = products.find((p) => p.id === id) || products[0];
 
   useEffect(() => {
@@ -60,7 +60,6 @@ function ProductContent() {
     return <div className="text-center mt-20 font-bold text-slate-300 bg-slate-900 h-screen pt-10">등록된 상품이 없습니다!</div>;
   }
 
-  // 추천 상품 영역도 당연히 최신순(정렬된 순서)으로 나오게 됨
   const recommendedProducts = products.filter((p) => p.id !== heroProduct?.id);
 
   return (
@@ -70,7 +69,6 @@ function ProductContent() {
         ⚡ TODAY HOT DEAL ⚡
       </header>
 
-      {/* 메인 상품 카드 */}
       <section className="bg-slate-800 p-5 mb-4 shadow-xl border-b border-slate-700">
         <div className="bg-orange-500/20 text-orange-400 text-xs font-bold px-2 py-1 inline-block rounded mb-3 border border-orange-500/30">
           🔥 SNS 인기 제품
@@ -108,7 +106,6 @@ function ProductContent() {
         </a>
       </section>
 
-      {/* 추천 상품 영역 */}
       <section className="p-5">
         <h2 className="text-lg font-bold text-slate-200 mb-4">
           👀 지금 뜨고 있는 다른 꿀템

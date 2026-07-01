@@ -13,14 +13,26 @@ function ProductContent() {
   const [products, setProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 1. 데이터 불러오기
+  // 1. 데이터 불러오기 및 🚨 최신순 정렬 적용 🚨
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "products"));
-        const data = querySnapshot.docs.map(doc => ({
+        let data = querySnapshot.docs.map(doc => ({
+          id: doc.id,
           ...doc.data()
         }));
+
+        // 💡 관리자 페이지와 동일한 시간 도장(createdAt) 기준 최신순 정렬 로직
+        data.sort((a: any, b: any) => {
+          if (a.createdAt && b.createdAt) {
+            return b.createdAt - a.createdAt; 
+          }
+          if (a.createdAt) return -1; 
+          if (b.createdAt) return 1;  
+          return b.id.localeCompare(a.id, undefined, { numeric: true });
+        });
+
         setProducts(data);
         setIsLoading(false);
       } catch (err) {
@@ -31,16 +43,15 @@ function ProductContent() {
     fetchProducts();
   }, []);
 
-  // 🚨 [오류 해결 포인트] 탭 이름 바꾸는 코드를 if문보다 위쪽으로 끌어올렸습니다!
+  // 링크에 id가 있으면 그 상품을 띄우고, 없으면 정렬된 데이터의 첫 번째(가장 최신) 상품을 띄움
   const heroProduct = products.find((p) => p.id === id) || products[0];
 
   useEffect(() => {
     if (heroProduct && heroProduct.name) {
-      document.title = heroProduct.name; // 브라우저 탭 이름(타이틀) 변경
+      document.title = heroProduct.name;
     }
   }, [heroProduct]);
 
-  // 여기서부터 화면을 어떻게 그릴지 결정하는 if문 시작
   if (isLoading) {
     return <div className="flex justify-center items-center h-screen font-bold text-orange-500 bg-slate-900">상품을 불러오는 중입니다... 🚀</div>;
   }
@@ -49,10 +60,8 @@ function ProductContent() {
     return <div className="text-center mt-20 font-bold text-slate-300 bg-slate-900 h-screen pt-10">등록된 상품이 없습니다!</div>;
   }
 
-  // 추천 상품 필터링
-  const recommendedProducts = products.filter(
-    (p) => p.id !== heroProduct?.id
-  );
+  // 추천 상품 영역도 당연히 최신순(정렬된 순서)으로 나오게 됨
+  const recommendedProducts = products.filter((p) => p.id !== heroProduct?.id);
 
   return (
     <div className="max-w-md mx-auto min-h-screen bg-slate-900 pb-20 font-sans text-slate-100">
@@ -74,6 +83,7 @@ function ProductContent() {
           onClick={() => sendGAEvent({ event: 'hero_image_click', value: heroProduct.name })}
           className="block group"
         >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img 
             src={heroProduct.imageUrl} 
             alt={heroProduct.name} 
@@ -87,7 +97,6 @@ function ProductContent() {
           <span className="text-sm text-slate-400 line-through mb-1">{heroProduct.originalPrice}</span>
         </div>
         
-        {/* 구매 버튼 */}
         <a 
           href={heroProduct.affiliateLink} 
           target="_blank" 
@@ -114,6 +123,7 @@ function ProductContent() {
               onClick={() => sendGAEvent({ event: 'recommend_click', value: product.name })}
               className="bg-slate-800 rounded-xl p-3 shadow-md border border-slate-700 hover:border-orange-500 transition-colors block group"
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img 
                 src={product.imageUrl} 
                 alt={product.name} 

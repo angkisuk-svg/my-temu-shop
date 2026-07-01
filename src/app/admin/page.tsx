@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { doc, setDoc, collection, getDocs, deleteDoc } from "firebase/firestore"; 
-import { db, auth } from '../firebase'; // 🔐 auth 추가
-import { signInWithEmailAndPassword } from "firebase/auth"; // 🔐 파이어베이스 공식 로그인 함수
+import { db, auth } from '../firebase'; 
+import { signInWithEmailAndPassword } from "firebase/auth"; 
 
 interface Product {
   id: string;
@@ -13,10 +13,11 @@ interface Product {
   originalPrice: string;
   imageUrl: string;
   affiliateLink: string;
+  createdAt?: number; // 💡 최신순 정렬을 위한 등록 시간 데이터 추가
 }
 
 export default function AdminPage() {
-  const [email, setEmail] = useState(''); // 🔐 이메일 입력칸 추가
+  const [email, setEmail] = useState(''); 
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -43,11 +44,9 @@ export default function AdminPage() {
     fetchProducts();
   }, [isAuthenticated, fetchTrigger]); 
 
-  // 🚨 완벽하게 변경된 로그인 로직
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // 파이어베이스 서버에 이메일/비밀번호를 보내 진짜 관리자인지 확인
       await signInWithEmailAndPassword(auth, email, password);
       setIsAuthenticated(true);
     } catch (error) {
@@ -59,7 +58,13 @@ export default function AdminPage() {
     e.preventDefault();
     try {
       const safeId = formData.id.trim();
-      const dataToSave = { ...formData, id: safeId };
+      // 💡 새 상품이면 현재 시간을 찍고, 기존 상품 수정이면 기존 시간을 유지합니다.
+      const dataToSave = { 
+        ...formData, 
+        id: safeId,
+        createdAt: formData.createdAt || Date.now() 
+      };
+      
       await setDoc(doc(db, "products", safeId), dataToSave);
       alert(`🎉 [${dataToSave.name}] 상품 정보가 저장되었습니다!`);
       setFormData({ id: '', name: '', category: '', price: '', originalPrice: '', imageUrl: '', affiliateLink: '' });
@@ -98,13 +103,13 @@ export default function AdminPage() {
   };
 
   const handleCopyLink = (id: string) => {
-    // 🚨 고정된 도메인(SITE_URL)을 사용하여 링크 생성
     const fullUrl = `${SITE_URL}/?id=${id}`;
     navigator.clipboard.writeText(fullUrl).then(() => {
       alert(`🔗 복사 완료: ${fullUrl}\n틱톡/숏폼에 바로 붙여넣으세요!`);
     });
   };
 
+  // 1. 다음 ID 추천을 위해 순수하게 ID 번호만 비교 (내림차순)
   const sortedById = [...products].sort((a, b) => b.id.localeCompare(a.id, undefined, { numeric: true }));
   const lastUsedId = sortedById.length > 0 ? sortedById[0].id : '없음';
   
@@ -116,7 +121,17 @@ export default function AdminPage() {
     }
   }
 
-  const sortedProducts = sortedById;
+  // 2. 🚨 화면 리스트용 정렬: 등록 시간(createdAt) 최신순으로 정렬!
+  const sortedProducts = [...products].sort((a, b) => {
+    if (a.createdAt && b.createdAt) {
+      return b.createdAt - a.createdAt; // 둘 다 시간이 있으면 최신순
+    }
+    if (a.createdAt) return -1; // a만 시간이 있으면(최신) 위로 올림
+    if (b.createdAt) return 1;  // b만 시간이 있으면(최신) 위로 올림
+    
+    // 만약 둘 다 옛날에 등록해서 시간이 없다면, 기존처럼 ID 기준 정렬
+    return b.id.localeCompare(a.id, undefined, { numeric: true });
+  });
 
   if (!isAuthenticated) {
     return (
@@ -160,7 +175,6 @@ export default function AdminPage() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-5 mb-12 bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl">
         <div>
           <label className="text-xs font-bold text-slate-400 mb-1 block">
-            {/* 🚨 미리보기 화면에도 새 도메인이 고정되어 나옵니다! */}
             고유 ID <span className="font-normal text-slate-500">(미리보기: {SITE_URL}/?id=<span className="text-orange-400 font-bold">{formData.id || '...'}</span>)</span>
           </label>
           <input required type="text" name="id" value={formData.id} onChange={handleChange} readOnly={isEditing}
@@ -230,6 +244,7 @@ export default function AdminPage() {
         {sortedProducts.map((product) => (
           <div key={product.id} className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex justify-between items-center hover:border-slate-500 transition-colors">
             <div className="flex items-center gap-4 overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={product.imageUrl} alt={product.name} className="w-14 h-14 rounded-lg object-cover bg-slate-900 shrink-0" />
               <div className="flex flex-col">
                 <span className="text-xs text-orange-400 font-bold mb-1">{product.id}</span>

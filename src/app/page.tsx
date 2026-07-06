@@ -71,7 +71,7 @@ function ProductContent() {
 
       <section className="bg-slate-800 p-5 mb-4 shadow-xl border-b border-slate-700">
         <div className="bg-orange-500/20 text-orange-400 text-xs font-bold px-2 py-1 inline-block rounded mb-3 border border-orange-500/30">
-          🔥 이포스팅은 쿠팡파트너스의 일환으로 일정액의 수수료를 받습니다.
+          이포스팅은 쿠팡파트너스의 일환으로 일정액의 수수료를 받습니다.
         </div>
         
         <a 

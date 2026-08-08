@@ -14,7 +14,7 @@ interface Product {
   imageUrl: string;
   affiliateLink: string;
   updatedAt?: number;
-  clickCount?: number; // 🚨 클릭수 필드 추가
+  clickCount?: number; 
 }
 
 interface Visit {
@@ -29,7 +29,7 @@ export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   const [products, setProducts] = useState<Product[]>([]);
-  const [visits, setVisits] = useState<Visit[]>([]); // 🚨 방문자 데이터 상태
+  const [visits, setVisits] = useState<Visit[]>([]); 
   
   const [fetchTrigger, setFetchTrigger] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -44,17 +44,14 @@ export default function AdminPage() {
     if (!isAuthenticated) return;
     const fetchData = async () => {
       try {
-        // 1. 상품 데이터 가져오기
         const prodSnapshot = await getDocs(collection(db, "products"));
         const prodData = prodSnapshot.docs.map(doc => ({ ...doc.data() } as Product));
         setProducts(prodData);
 
-        // 2. 방문자 데이터 가져오기
         const visitSnapshot = await getDocs(collection(db, "visits"));
         const visitData = visitSnapshot.docs.map(doc => doc.data() as Visit);
-        // 최신 날짜가 위로 오게 정렬
         visitData.sort((a, b) => b.date.localeCompare(a.date));
-        setVisits(visitData.slice(0, 7)); // 최근 7일만 잘라서 보여주기
+        setVisits(visitData.slice(0, 7)); 
         
       } catch (error) {
         console.error("데이터 로딩 실패:", error);
@@ -148,15 +145,12 @@ export default function AdminPage() {
     });
   };
 
-  // 1. 등록 관리용 최신 정렬 (기존 로직)
   const sortedProducts = [...products].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 
-  // 2. 🚨 통계용 클릭수 TOP 10 정렬
   const topClickedProducts = [...products]
     .sort((a, b) => (b.clickCount || 0) - (a.clickCount || 0))
     .slice(0, 10);
 
-  // 추천 ID 로직
   const sortedById = [...products].sort((a, b) => b.id.localeCompare(a.id, undefined, { numeric: true }));
   const lastUsedId = sortedById.length > 0 ? sortedById[0].id : '없음';
   let nextSuggestedId = '0001';
@@ -184,49 +178,10 @@ export default function AdminPage() {
   return (
     <div className="max-w-2xl mx-auto min-h-screen bg-slate-900 p-6 font-sans text-slate-100">
       
-      {/* 🚨 [신규] 자체 통계 대시보드 영역 */}
       <div className="border-b border-slate-700 pb-4 mb-6">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-          <span>📊</span> 실시간 스토어 통계
-        </h2>
-        <p className="text-slate-400 text-sm mt-1">구글 콘솔 없이 앱 내에서 직관적으로 데이터를 확인하세요.</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-        {/* 방문자 수 박스 */}
-        <div className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
-          <h3 className="text-lg font-bold text-blue-400 mb-4 flex items-center gap-2"><span>👥</span> 최근 7일 방문자</h3>
-          <div className="flex flex-col gap-2">
-            {visits.length > 0 ? visits.map((visit, idx) => (
-              <div key={idx} className="flex justify-between items-center bg-slate-900 p-2 px-4 rounded-lg border border-slate-700">
-                <span className="text-sm text-slate-300">{visit.date}</span>
-                <span className="font-bold text-white bg-blue-500/20 px-2 py-1 rounded text-sm">{visit.count} 명</span>
-              </div>
-            )) : <p className="text-sm text-slate-500 text-center py-4">아직 방문 데이터가 없습니다.</p>}
-          </div>
-        </div>
-
-        {/* 클릭수 TOP 10 박스 */}
-        <div className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
-          <h3 className="text-lg font-bold text-orange-400 mb-4 flex items-center gap-2"><span>🔥</span> 클릭수 TOP 10</h3>
-          <div className="flex flex-col gap-2">
-            {topClickedProducts.length > 0 ? topClickedProducts.map((p, idx) => (
-              <div key={p.id} className="flex justify-between items-center bg-slate-900 p-2 px-3 rounded-lg border border-slate-700">
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <span className={`font-bold w-5 text-center ${idx < 3 ? 'text-orange-500' : 'text-slate-500'}`}>{idx + 1}</span>
-                  <span className="text-sm text-white truncate max-w-[120px] sm:max-w-[150px]">{p.name}</span>
-                </div>
-                <span className="font-bold text-orange-400 text-sm whitespace-nowrap">{p.clickCount || 0} 회</span>
-              </div>
-            )) : <p className="text-sm text-slate-500 text-center py-4">아직 클릭 데이터가 없습니다.</p>}
-          </div>
-        </div>
-      </div>
-
-      <div className="border-b border-slate-700 pb-4 mb-6 mt-10">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
           <span>⚙️</span> 상품 등록 및 수정
-        </h2>
+        </h1>
       </div>
 
       <div className="mb-4 p-4 bg-slate-800 border border-slate-600 rounded-lg flex items-center gap-3 shadow-md">
@@ -295,7 +250,6 @@ export default function AdminPage() {
               <div className="flex flex-col">
                 <span className="text-xs text-orange-400 font-bold mb-1">{product.id}</span>
                 <span className="text-sm font-bold text-white truncate max-w-[200px] sm:max-w-[300px]">{product.name}</span>
-                {/* 🚨 관리 목록에서도 클릭수를 작게 보여줍니다 */}
                 <span className="text-xs text-slate-500 mt-1">👀 클릭: {product.clickCount || 0}회</span>
               </div>
             </div>
@@ -312,7 +266,47 @@ export default function AdminPage() {
         )}
       </div>
 
-      <div className="bg-slate-950 p-6 rounded-xl border border-red-500/30 shadow-lg mt-12 mb-6">
+      {/* 🚨 [이동 완료] 자체 통계 대시보드 영역을 아래로 내렸습니다 */}
+      <div className="border-b border-slate-700 pb-4 mb-6 mt-16">
+        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+          <span>📊</span> 실시간 스토어 통계
+        </h2>
+        <p className="text-slate-400 text-sm mt-1">구글 콘솔 없이 앱 내에서 직관적으로 데이터를 확인하세요.</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+        {/* 방문자 수 박스 */}
+        <div className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
+          <h3 className="text-lg font-bold text-blue-400 mb-4 flex items-center gap-2"><span>👥</span> 최근 7일 방문자</h3>
+          <div className="flex flex-col gap-2">
+            {visits.length > 0 ? visits.map((visit, idx) => (
+              <div key={idx} className="flex justify-between items-center bg-slate-900 p-2 px-4 rounded-lg border border-slate-700">
+                <span className="text-sm text-slate-300">{visit.date}</span>
+                <span className="font-bold text-white bg-blue-500/20 px-2 py-1 rounded text-sm">{visit.count} 명</span>
+              </div>
+            )) : <p className="text-sm text-slate-500 text-center py-4">아직 방문 데이터가 없습니다.</p>}
+          </div>
+        </div>
+
+        {/* 클릭수 TOP 10 박스 */}
+        <div className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
+          <h3 className="text-lg font-bold text-orange-400 mb-4 flex items-center gap-2"><span>🔥</span> 클릭수 TOP 10</h3>
+          <div className="flex flex-col gap-2">
+            {topClickedProducts.length > 0 ? topClickedProducts.map((p, idx) => (
+              <div key={p.id} className="flex justify-between items-center bg-slate-900 p-2 px-3 rounded-lg border border-slate-700">
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <span className={`font-bold w-5 text-center ${idx < 3 ? 'text-orange-500' : 'text-slate-500'}`}>{idx + 1}</span>
+                  <span className="text-sm text-white truncate max-w-[120px] sm:max-w-[150px]">{p.name}</span>
+                </div>
+                <span className="font-bold text-orange-400 text-sm whitespace-nowrap">{p.clickCount || 0} 회</span>
+              </div>
+            )) : <p className="text-sm text-slate-500 text-center py-4">아직 클릭 데이터가 없습니다.</p>}
+          </div>
+        </div>
+      </div>
+
+      {/* 관리자 계정 비밀번호 변경 UI */}
+      <div className="bg-slate-950 p-6 rounded-xl border border-red-500/30 shadow-lg mb-6">
         <h3 className="text-lg font-bold text-red-400 flex items-center gap-2 mb-4"><span>🔒</span> 관리자 계정 비밀번호 변경</h3>
         <p className="text-xs text-slate-400 mb-4">보안을 위해 앱을 처음 인계받으셨거나, 정기적으로 비밀번호를 변경해 주세요.</p>
         <form onSubmit={handleChangePassword} className="flex gap-3">

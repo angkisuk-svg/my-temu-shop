@@ -13,7 +13,7 @@ interface Product {
   originalPrice: string;
   imageUrl: string;
   affiliateLink: string;
-  createdAt?: number; 
+  updatedAt?: number; // 🚨 시간 도장 속성 추가
 }
 
 export default function AdminPage() {
@@ -59,15 +59,16 @@ export default function AdminPage() {
     try {
       const safeId = formData.id.trim();
       
-      // 🚨 핵심 수정 포인트: 수정이든 신규든 무조건 '현재 시간'으로 덮어씌움!
+      // 🚨 [핵심 고도화] 상품을 저장/수정할 때 '현재 시간(Date.now())'을 도장 찍어줍니다!
       const dataToSave = { 
         ...formData, 
         id: safeId,
-        createdAt: Date.now() 
+        updatedAt: Date.now() 
       };
       
       await setDoc(doc(db, "products", safeId), dataToSave);
-      alert(`🎉 [${dataToSave.name}] 상품 정보가 저장되었습니다!`);
+      alert(`🎉 [${dataToSave.name}] 상품 정보가 저장/수정되었습니다!`);
+      
       setFormData({ id: '', name: '', category: '', price: '', originalPrice: '', imageUrl: '', affiliateLink: '' });
       setIsEditing(false); 
       setFetchTrigger(!fetchTrigger); 
@@ -110,6 +111,11 @@ export default function AdminPage() {
     });
   };
 
+  // 🚨 [핵심 고도화] updatedAt(수정 시간) 기준으로 최신순(내림차순) 정렬!
+  // 옛날 데이터(updatedAt이 없는 경우)는 0으로 처리해 아래로 내립니다.
+  const sortedProducts = [...products].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+  // 추천 ID 로직 (기존 유지)
   const sortedById = [...products].sort((a, b) => b.id.localeCompare(a.id, undefined, { numeric: true }));
   const lastUsedId = sortedById.length > 0 ? sortedById[0].id : '없음';
   
@@ -120,18 +126,6 @@ export default function AdminPage() {
       nextSuggestedId = String(parseInt(numOnly, 10) + 1).padStart(numOnly.length, '0');
     }
   }
-
-  // 🚨 정렬 로직 강화: 시간을 정확한 숫자로 변환하여 비교 (에러 완벽 차단)
-  const sortedProducts = [...products].sort((a, b) => {
-    const timeA = Number(a.createdAt) || 0;
-    const timeB = Number(b.createdAt) || 0;
-    
-    if (timeA > 0 && timeB > 0) return timeB - timeA;
-    if (timeA > 0) return -1;
-    if (timeB > 0) return 1;
-    
-    return b.id.localeCompare(a.id, undefined, { numeric: true });
-  });
 
   if (!isAuthenticated) {
     return (
@@ -155,6 +149,7 @@ export default function AdminPage() {
 
   return (
     <div className="max-w-2xl mx-auto min-h-screen bg-slate-900 p-6 font-sans text-slate-100">
+      
       <div className="border-b border-slate-700 pb-4 mb-6 flex justify-between items-end">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -240,6 +235,7 @@ export default function AdminPage() {
       </div>
 
       <div className="flex flex-col gap-3 mb-12">
+        {/* 🚨 최신순으로 정렬된 리스트를 뿌려줍니다! */}
         {sortedProducts.map((product) => (
           <div key={product.id} className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex justify-between items-center hover:border-slate-500 transition-colors">
             <div className="flex items-center gap-4 overflow-hidden">

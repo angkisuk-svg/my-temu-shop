@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { doc, setDoc, collection, getDocs, deleteDoc } from "firebase/firestore"; 
 import { db, auth } from '../firebase'; 
-import { signInWithEmailAndPassword } from "firebase/auth"; 
+import { signInWithEmailAndPassword, updatePassword } from "firebase/auth"; // 🚨 updatePassword 추가
 
 interface Product {
   id: string;
@@ -13,12 +13,13 @@ interface Product {
   originalPrice: string;
   imageUrl: string;
   affiliateLink: string;
-  updatedAt?: number; // 🚨 시간 도장 속성 추가
+  updatedAt?: number;
 }
 
 export default function AdminPage() {
   const [email, setEmail] = useState(''); 
   const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState(''); // 🚨 새 비밀번호 상태 추가
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [fetchTrigger, setFetchTrigger] = useState(false);
@@ -54,12 +55,34 @@ export default function AdminPage() {
     }
   };
 
+  // 🚨 [복구 완료] 과거에 사용했던 비밀번호 변경 로직 부활!
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!auth.currentUser) return;
+    
+    if (newPassword.length < 6) {
+      alert("비밀번호는 최소 6자리 이상이어야 합니다.");
+      return;
+    }
+    
+    try {
+      await updatePassword(auth.currentUser, newPassword);
+      alert("🎉 비밀번호가 성공적으로 변경되었습니다!");
+      setNewPassword('');
+    } catch (error: any) {
+      if (error.code === 'auth/requires-recent-login') {
+        alert("보안을 위해 로그아웃 후 다시 로그인한 직후에만 변경할 수 있습니다.");
+      } else {
+        alert("비밀번호 변경에 실패했습니다.");
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const safeId = formData.id.trim();
       
-      // 🚨 [핵심 고도화] 상품을 저장/수정할 때 '현재 시간(Date.now())'을 도장 찍어줍니다!
       const dataToSave = { 
         ...formData, 
         id: safeId,
@@ -111,11 +134,9 @@ export default function AdminPage() {
     });
   };
 
-  // 🚨 [핵심 고도화] updatedAt(수정 시간) 기준으로 최신순(내림차순) 정렬!
-  // 옛날 데이터(updatedAt이 없는 경우)는 0으로 처리해 아래로 내립니다.
+  // 핵심 로직 유지: 수정 시간 기준 최신순 정렬
   const sortedProducts = [...products].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 
-  // 추천 ID 로직 (기존 유지)
   const sortedById = [...products].sort((a, b) => b.id.localeCompare(a.id, undefined, { numeric: true }));
   const lastUsedId = sortedById.length > 0 ? sortedById[0].id : '없음';
   
@@ -235,7 +256,6 @@ export default function AdminPage() {
       </div>
 
       <div className="flex flex-col gap-3 mb-12">
-        {/* 🚨 최신순으로 정렬된 리스트를 뿌려줍니다! */}
         {sortedProducts.map((product) => (
           <div key={product.id} className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex justify-between items-center hover:border-slate-500 transition-colors">
             <div className="flex items-center gap-4 overflow-hidden">
@@ -283,6 +303,27 @@ export default function AdminPage() {
           allowFullScreen
           sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
         />
+      </div>
+
+      {/* 🚨 [복구 완료] 최하단 비밀번호 변경 UI */}
+      <div className="bg-slate-950 p-6 rounded-xl border border-red-500/30 shadow-lg mt-12 mb-6">
+        <h3 className="text-lg font-bold text-red-400 flex items-center gap-2 mb-4">
+          <span>🔒</span> 관리자 계정 비밀번호 변경
+        </h3>
+        <p className="text-xs text-slate-400 mb-4">보안을 위해 앱을 처음 인계받으셨거나, 정기적으로 비밀번호를 변경해 주세요.</p>
+        <form onSubmit={handleChangePassword} className="flex gap-3">
+          <input 
+            type="password" 
+            required 
+            value={newPassword} 
+            onChange={(e) => setNewPassword(e.target.value)} 
+            placeholder="새로운 비밀번호 (6자리 이상)" 
+            className="flex-1 bg-slate-900 border border-slate-700 p-3 rounded-lg text-white focus:border-red-500 focus:outline-none text-sm"
+          />
+          <button type="submit" className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-bold transition text-sm whitespace-nowrap">
+            변경하기
+          </button>
+        </form>
       </div>
 
     </div>
